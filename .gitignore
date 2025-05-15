@@ -76,6 +76,8 @@ ipython_config.py
 *.pt
 *.pth
 *.ckpt
+*.txt
+*.json.gz
 
 # mypy
 .mypy_cache/
@@ -187,3 +189,6 @@ cover/
 
 # wandb
 wandb/
+
+# RUN
+*RUN/

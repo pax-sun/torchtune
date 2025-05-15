@@ -1,35 +1,35 @@
 # Config for multi-device full finetuning in full_finetune_distributed.py
-# using a Qwen2.5 0.5B model
+# using a Qwen3 0.6B model
 #
 # This config assumes that you've run the following command before launching:
-#   tune download Qwen/Qwen2.5-0.5B-Instruct --output-dir /tmp/Qwen2.5-0.5B-Instruct
+#   tune download Qwen/Qwen3-0.6B --output-dir /tmp/Qwen3-0.6B
 #
 # To launch on 2 devices, run the following command from root:
-#   tune run --nproc_per_node 2 full_finetune_distributed --config qwen2_5/0.5B_full
+#   tune run --nproc_per_node 2 full_finetune_distributed --config qwen3/0.6B_full
 #
 # You can add specific overrides through the command line. For example
 # to override the checkpointer directory while launching training:
-#   tune run --nproc_per_node 2 full_finetune_distributed --config qwen2_5/0.5B_full checkpointer.checkpoint_dir=<YOUR_CHECKPOINT_DIR>
+#   tune run --nproc_per_node 2 full_finetune_distributed --config qwen3/0.6B_full checkpointer.checkpoint_dir=<YOUR_CHECKPOINT_DIR>
 #
 # This config is for fine-tuning on 2+ GPUs.
 
-output_dir: /mnt/afs/huangting3/workspace/HT-torchtune/RUN/qwen2_5_0_5B/full # /tmp may be deleted by your system. Change it to your preference.
+output_dir: /mnt/afs/huangting3/workspace/HT-torchtune/RUN/qwen3_0_6B/full # /tmp may be deleted by your system. Change it to your preference.
 
 # Model arguments
 model:
-  _component_: torchtune.models.qwen2_5.qwen2_5_0_5b
+  _component_: torchtune.models.qwen3.qwen3_0_6b_base
 
 # Tokenizer
 tokenizer:
-  _component_: torchtune.models.qwen2_5.qwen2_5_tokenizer
-  path: /mnt/afs/huangting3/hf/qwen2.5-0.5B/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987/vocab.json
-  merges_file: /mnt/afs/huangting3/hf/qwen2.5-0.5B/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987/merges.txt
+  _component_: torchtune.models.qwen3.qwen3_tokenizer
+  path: /mnt/afs/huangting3/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/6130ef31402718485ca4d80a6234f70d9a4cf362/vocab.json
+  merges_file: /mnt/afs/huangting3/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/6130ef31402718485ca4d80a6234f70d9a4cf362/merges.txt
   max_seq_len: null
 
 # Checkpointer
 checkpointer:
   _component_: torchtune.training.FullModelHFCheckpointer
-  checkpoint_dir: /mnt/afs/huangting3/hf/qwen2.5-0.5B/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987
+  checkpoint_dir: /mnt/afs/huangting3/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/6130ef31402718485ca4d80a6234f70d9a4cf362
   checkpoint_files: [model.safetensors]
   recipe_checkpoint: null
   output_dir: ${output_dir}
@@ -47,7 +47,7 @@ shuffle: True
 epochs: 1
 max_steps_per_epoch: null
 batch_size: 2
-gradient_accumulation_steps: 4  # Use to increase effective batch size
+gradient_accumulation_steps: 8  # Use to increase effective batch size
 optimizer:
   _component_: torch.optim.AdamW
   fused: True
@@ -78,7 +78,7 @@ log_level: INFO  # DEBUG, WARN, etc.
 # Profiler (disabled)
 profiler:
   _component_: torchtune.training.setup_torch_profiler
-  enabled: True
+  enabled: False
 
   #Output directory of trace artifacts
   output_dir: ${output_dir}/profiling_outputs

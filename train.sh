@@ -21,7 +21,7 @@ mkdir -p ${OUT_DIR}/logs         # 日志路径(代码相关)
 # LOG_FILE=${OUT_DIR}/logs/log_node${RANK}_${T}.log
 LOG_FILE=${OUT_DIR}/logs/log_node${RANK}.log
 
-CONFIG=/mnt/afs/huangting3/workspace/HT-torchtune/recipes/configs/qwen2_5/0.5B_full.yaml
+CONFIG=/mnt/afs/huangting3/workspace/HT-torchtune/recipes/configs/qwen3/0.6B_full.yaml
 
 cd $ROOT
 export PYTHONPATH=$ROOT:$PYTHONPATH

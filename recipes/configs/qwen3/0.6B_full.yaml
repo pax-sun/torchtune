@@ -24,7 +24,7 @@ tokenizer:
   _component_: torchtune.models.qwen3.qwen3_tokenizer
   path: /mnt/afs/huangting3/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/6130ef31402718485ca4d80a6234f70d9a4cf362/vocab.json
   merges_file: /mnt/afs/huangting3/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/6130ef31402718485ca4d80a6234f70d9a4cf362/merges.txt
-  max_seq_len: null
+  max_seq_len: 4096
 
 # Checkpointer
 checkpointer:
@@ -39,14 +39,15 @@ resume_from_checkpoint: False
 # Dataset
 dataset:
   _component_: torchtune.datasets.alpaca_cleaned_dataset
-  packed: False  # True increases speed
+  packed: True  # True increases speed
 seed: null
 shuffle: True
+ulysses_sequence_parallel_size: 2
 
 # Fine-tuning arguments
 epochs: 1
 max_steps_per_epoch: null
-batch_size: 2
+batch_size: 1
 gradient_accumulation_steps: 8  # Use to increase effective batch size
 optimizer:
   _component_: torch.optim.AdamW

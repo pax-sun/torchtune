@@ -75,6 +75,7 @@ class ParallelDims:
         if dp_shard < 0:
             self.dp_shard = dp_shard = self.world_size // (dp_replicate * tp)
         assert dp_shard >= 1
+        self.dp_replicate = dp_replicate = self.world_size // (dp_shard * tp)
 
         assert dp_replicate * dp_shard * tp == self.world_size, (
             f"Invalid parallel dims: dp_replicate({dp_replicate}) * dp_shard({dp_shard}) * "

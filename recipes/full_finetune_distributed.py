@@ -29,6 +29,7 @@ from torchtune.data import padded_collate_packed
 from torchtune.datasets import ConcatDataset
 from torchtune.modules.embedding_utils import resize_token_embeddings
 from torchtune.modules.loss import SFTLoss
+from torchtune.modules.ulysess import gather_outpus_and_unpad, set_ulysses_sequence_parallel_group, ulysses_pad_and_slice_inputs
 from torchtune.recipe_interfaces import FTRecipeInterface
 from torchtune.training import (
     DummyProfiler,
@@ -158,25 +159,27 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             raise ValueError(
                 "Tensor Parallel plan needs to be provided when tensor parallel is enabled."
             )
-        data_shard = cfg.get("data_parallel_shard_dim", -1)  # -1 means to infer
-        data_replicate = cfg.get("data_parallel_replicate_dim", 1)
+        self.sp_size = cfg.get("ulysses_sequence_parallel_size", -1)  # -1 means to infer
+        dp_size = cfg.get("data_parallel_size", 1)
 
         # Set up n-d device mesh
         self.parallel_dims = training.ParallelDims(
-            dp_replicate=data_replicate,
-            dp_shard=data_shard,
+            dp_replicate=dp_size,
+            dp_shard=self.sp_size,
             tp=self.tp_degree,
             world_size=self.world_size,
         )
         self.world_mesh = self.parallel_dims.build_mesh(device_type=device_type)
-        if self.parallel_dims.dp_enabled:
-            dp_mesh = self.world_mesh["dp"]
+        if self.parallel_dims.dp_replicate_enabled:
+            dp_mesh = self.world_mesh["dp_replicate"]
             self.dp_degree, self.dp_rank = (
                 dp_mesh.size(),
                 dp_mesh.get_local_rank(),
             )
         else:
             self.dp_degree, self.dp_rank = 1, 0
+
+        set_ulysses_sequence_parallel_group(self.world_mesh["dp_shard"].get_group())
 
         # Logging attributes
         self._output_dir = cfg.output_dir
@@ -808,8 +811,21 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         # Shape [b, s], needed for the loss not the model
         labels = batch.pop("labels")
 
+        # pad and slice the inputs if sp > 1
+        if self.sp_size > 1:
+            batch["tokens"], batch["input_pos"], pad_size = ulysses_pad_and_slice_inputs(batch["tokens"],
+                                                                                        batch["input_pos"],
+                                                                                        sp_size=self.sp_size)
+
         with self.activations_handling_ctx:
             outputs = self._model(**batch)
+
+        # gather output if sp > 1
+        if self.sp_size > 1:
+            outputs = gather_outpus_and_unpad(outputs,
+                                            gather_dim=1,
+                                            unpad_dim=1,
+                                            padding_size=pad_size)
 
         # post process for third party loss functions
         if not isinstance(self._loss_fn, SFTLoss):

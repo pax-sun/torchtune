@@ -13,7 +13,7 @@
 #
 # This config is for fine-tuning on 2+ GPUs.
 
-output_dir: /mnt/afs/huangting3/workspace/HT-torchtune/RUN/qwen2_5_0_5B/full # /tmp may be deleted by your system. Change it to your preference.
+output_dir: /tmp/torchtune/qwen2_5_0_5B/full # /tmp may be deleted by your system. Change it to your preference.
 
 # Model arguments
 model:
@@ -22,14 +22,14 @@ model:
 # Tokenizer
 tokenizer:
   _component_: torchtune.models.qwen2_5.qwen2_5_tokenizer
-  path: /mnt/afs/huangting3/hf/qwen2.5-0.5B/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987/vocab.json
-  merges_file: /mnt/afs/huangting3/hf/qwen2.5-0.5B/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987/merges.txt
+  path: /tmp/Qwen2.5-0.5B-Instruct/vocab.json
+  merges_file: /tmp/Qwen2.5-0.5B-Instruct/merges.txt
   max_seq_len: null
 
 # Checkpointer
 checkpointer:
   _component_: torchtune.training.FullModelHFCheckpointer
-  checkpoint_dir: /mnt/afs/huangting3/hf/qwen2.5-0.5B/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987
+  checkpoint_dir: /tmp/Qwen2.5-0.5B-Instruct  
   checkpoint_files: [model.safetensors]
   recipe_checkpoint: null
   output_dir: ${output_dir}
@@ -78,7 +78,7 @@ log_level: INFO  # DEBUG, WARN, etc.
 # Profiler (disabled)
 profiler:
   _component_: torchtune.training.setup_torch_profiler
-  enabled: True
+  enabled: False
 
   #Output directory of trace artifacts
   output_dir: ${output_dir}/profiling_outputs

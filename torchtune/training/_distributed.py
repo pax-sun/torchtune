@@ -75,9 +75,6 @@ class ParallelDims:
         if tp > 1:
             assert ulysses_sp == 1, "ulysses_sp is not compatible with TP now"
         
-        dp_size = dp_replicate * dp_shard
-        assert dp_size % ulysses_sp == 0, "dp_size must be devided by ulysses_sp"
-
         for d in (dp_replicate, tp):
             assert d >= 1, "Parallelism degree should be >= 1, except for dp_shard"
 
@@ -90,6 +87,10 @@ class ParallelDims:
             f"Invalid parallel dims: dp_replicate({dp_replicate}) * dp_shard({dp_shard}) * "
             f"tp({tp}) != WORLD_SIZE({self.world_size})"
         )
+        
+        dp_size = dp_replicate * dp_shard
+        assert dp_size % ulysses_sp == 0, "dp_size must be devided by ulysses_sp"
+
 
     def build_mesh(self, device_type):
         dims = []

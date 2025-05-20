@@ -788,8 +788,10 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         collate_fn = _get_component_from_path(collate_fn)
 
         real_dp_rank = int(self.dp_rank / get_ulysses_sequence_parallel_world_size())
+        real_dp_degree= int(self.dp_degree / get_ulysses_sequence_parallel_world_size())
+
         sampler = StatefulDistributedSampler(
-            ds, num_replicas=self.dp_degree, rank=real_dp_rank, shuffle=shuffle, seed=0
+            ds, num_replicas=real_dp_degree, rank=real_dp_rank, shuffle=shuffle, seed=0
         )
         dataloader = StatefulDataLoader(
             dataset=ds,

@@ -26,6 +26,7 @@ from torch.distributed.checkpoint.state_dict import (
     set_optimizer_state_dict,
     StateDictOptions,
 )
+from torch.distributed import new_group, get_world_size, get_rank
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 from torch.distributed.fsdp import ShardingStrategy
 from torch.nn.modules.module import _IncompatibleKeys
@@ -54,20 +55,25 @@ VALID_BACKENDS_FOR_MEMORY_STATS = ("cuda", "xpu", "npu")
 
 @dataclass
 class ParallelDims:
-    dp_replicate: int
-    dp_shard: int
-    tp: int
-    world_size: int
+    dp_replicate: int = 1
+    dp_shard: int = 1
+    tp: int = 1
+    ulysses_sp: int = 1
+    world_size: int = 1
 
     def __post_init__(self):
         self._validate()
 
     def _validate(self):
-        dp_replicate, dp_shard, tp = (
+        dp_replicate, dp_shard, tp, ulysses_sp = (
             self.dp_replicate,
             self.dp_shard,
             self.tp,
+            self.ulysses_sp,
         )
+        if tp > 1:
+            assert ulysses_sp == 1, "ulysses_sp is not compatible with TP now"
+
         for d in (dp_replicate, tp):
             assert d >= 1, "Parallelism degree should be >= 1, except for dp_shard"
 
@@ -75,12 +81,45 @@ class ParallelDims:
         if dp_shard < 0:
             self.dp_shard = dp_shard = self.world_size // (dp_replicate * tp)
         assert dp_shard >= 1
-        self.dp_replicate = dp_replicate = self.world_size // (dp_shard * tp)
 
         assert dp_replicate * dp_shard * tp == self.world_size, (
             f"Invalid parallel dims: dp_replicate({dp_replicate}) * dp_shard({dp_shard}) * "
             f"tp({tp}) != WORLD_SIZE({self.world_size})"
         )
+
+    def _build_ulysses_sp(mesh, ulysses_sp: int):
+        """
+        Build a new sequence parallel (ulysses_sp) process group.
+        Every A DP ranks will be grouped into one sequence parallel group.
+        """
+        rank = get_rank()
+        
+        # Get the existing data parallel (DP) group
+        dp_group = mesh['dp']
+        dp_ranks = dp_group.ranks if hasattr(dp_group, 'ranks') else list(dp_group)
+
+        # Split all DP ranks into sequence parallel groups of size A
+        sp_groups = []
+        for i in range(0, len(dp_ranks), ulysses_sp):
+            sp_group = dp_ranks[i:i+ulysses_sp]
+            sp_groups.append(sp_group)
+
+        # Find the group that contains the current rank
+        for group in sp_groups:
+            if rank in group:
+                sp_group_for_current_rank = group
+                break
+        else:
+            raise RuntimeError(f"Rank {rank} is not in any ulysses_sp group.")
+
+        # Create a new torch.distributed process group for the current rank's SP group
+        sp_process_group = new_group(ranks=sp_group_for_current_rank)
+
+        # Register the new group into the mesh
+        mesh['ulysses_sp'] = sp_process_group
+        mesh['ulysses_sp_ranks'] = sp_group_for_current_rank  # Optional: useful for debugging or logging
+
+        return mesh
 
     def build_mesh(self, device_type):
         dims = []
@@ -108,6 +147,8 @@ class ParallelDims:
 
         if dp_mesh_dim_names != []:
             mesh[tuple(dp_mesh_dim_names)]._flatten(mesh_dim_name="dp")
+
+        self._build_ulysses_sp(mesh, self.ulysses_sp)
 
         return mesh
 

@@ -28,8 +28,10 @@ QWEN3_SPECIAL_TOKENS = {
 # behaviour that's specific to them.
 class Qwen3Tokenizer(Qwen2_5Tokenizer):  # noqa: N801
     """This tokenizer is simply a wrapper around the Qwen2_5Tokenizer, with a few extra tokens added.
+
     See <https://github.com/huggingface/transformers/blob/v4.40.1/src/transformers/models/qwen2/tokenization_qwen2.py>
     and <https://huggingface.co/Qwen/Qwen3-8B/blob/main/tokenizer_config.json>.
+
     Args:
         path (str): Path to vocab.json file.
         merges_file (str): Path to merges.txt file.
@@ -40,10 +42,12 @@ class Qwen3Tokenizer(Qwen2_5Tokenizer):  # noqa: N801
             Default: None
         prompt_template (Optional[PromptTemplate]): template used to format the messages based on their role. This is used
             to add structured text around the actual messages. The structured text is used in three scenarios:
+
             - Task-specific templates to gear models for a particular task that it will expect after training
             - Model-specific templates that are required whenever the model is prompted, such as the [INST]
               tags in Llama2 and in Mistral
             - Community standardized templates, such as :class:`~torchtune.data.ChatMLTemplate`
+
             The extra text will still get tokenized as normal text, not as special tokens.
             Default: None
         errors (str): Paradigm to follow when decoding bytes to UTF-8. Defaults to "replace".
@@ -60,6 +64,7 @@ class Qwen3Tokenizer(Qwen2_5Tokenizer):  # noqa: N801
             By default, we set the cache size equals to size of the official Qwen2 tokenizer.
         truncation_type (str): type of truncation to apply, either "left" or "right".
             Default is "right".
+
     Example:
         >>> tokenizer = Qwen3Tokenizer(
                 path="/path/to/vocab.json", merges_file="/path/to/merges.txt", special_tokens=QWEN3_SPECIAL_TOKENS)

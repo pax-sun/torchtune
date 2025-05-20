@@ -7,6 +7,8 @@
 import os
 import sys
 import time
+import datetime
+
 
 from functools import partial
 from typing import Any, Dict, List, Optional, Union
@@ -913,7 +915,6 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         self._profiler.start()
         # self.epochs_run should be non-zero when we're resuming from a checkpoint
         for curr_epoch in range(self.epochs_run, self.total_epochs):
-            pbar = tqdm(total=self._steps_per_epoch, disable=not self._is_rank_zero)
             self._dataloader.sampler.set_epoch(curr_epoch)
             for idx, batch in enumerate(self._dataloader):
                 # Start tracking CUDA memory for active steps for just the first epoch
@@ -992,10 +993,6 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                         precompute_float8_dynamic_scale_for_fsdp(self._model)
 
                     loss_to_log = running_loss.detach().item() / num_tokens
-                    pbar.update(1)
-                    pbar.set_description(
-                        f"{curr_epoch + 1}|{self.global_step}|Loss: {loss_to_log}"
-                    )
 
                     # Log per-step metrics
                     if (
@@ -1027,6 +1024,10 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                             log_dict,
                             step=self.global_step,
                         )
+                        if self._is_rank_zero:
+                            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            log_str = f"[{timestamp}] Step {self.global_step}: " + ", ".join([f"{k}={v:.6f}" for k, v in log_dict.items()])
+                            print(log_str)
 
                     # Reset running stats for the next step
                     running_loss = 0
@@ -1056,7 +1057,6 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                         self._run_val_every_n_steps is not None
                         and self.global_step % self._run_val_every_n_steps == 0
                     ):
-                        pbar.refresh()
                         self.validate()
 
                 if (
@@ -1108,3 +1108,4 @@ def recipe_main(cfg: DictConfig) -> None:
 
 if __name__ == "__main__":
     sys.exit(recipe_main())
+

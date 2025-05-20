@@ -116,7 +116,7 @@ class ParallelDims:
         sp_process_group = new_group(ranks=sp_group_for_current_rank)
 
         # Register the new group into the mesh
-        mesh['ulysses_sp'] = sp_process_group
+        mesh['ulysses_sp_process_group'] = sp_process_group
         mesh['ulysses_sp_ranks'] = sp_group_for_current_rank  # Optional: useful for debugging or logging
 
         return mesh

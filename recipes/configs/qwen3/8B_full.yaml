@@ -32,6 +32,9 @@ dataset:
 seed: null
 shuffle: True
 
+# Parallelism
+ulysses_sequence_parallel_size: 1
+
 # Model Arguments
 model:
   _component_: torchtune.models.qwen3.qwen3_8b_instruct

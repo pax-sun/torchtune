@@ -45,7 +45,7 @@ seed: null
 shuffle: True
 
 # Parallelism
-ulysses_sequence_parallel_size: 2
+ulysses_sequence_parallel_size: 1
 
 # Fine-tuning arguments
 epochs: 1

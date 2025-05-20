@@ -76,7 +76,6 @@ ipython_config.py
 *.pt
 *.pth
 *.ckpt
-*.txt
 *.json.gz
 
 # mypy

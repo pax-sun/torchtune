@@ -24,6 +24,7 @@ def qwen3_0_6b_base() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 0.6B base model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-0.6B-Base
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 0.6B base model
     """
@@ -52,6 +53,7 @@ def qwen3_0_6b_instruct() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 0.6B instruct model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-0.6B
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 0.6B instruct model
     """
@@ -80,6 +82,7 @@ def qwen3_1_7b_base() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 1.7B base model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-1.7B-Base
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 1.7B base model
     """
@@ -108,6 +111,7 @@ def qwen3_1_7b_instruct() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 1.7B instruct model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-1.7B
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 1.7B instruct model
     """
@@ -136,6 +140,7 @@ def qwen3_4b_base() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 4B base model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-4B-Base
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 4B base model
     """
@@ -164,6 +169,7 @@ def qwen3_4b_instruct() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 4B instruct model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-4B
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 4B instruct model
     """
@@ -192,6 +198,7 @@ def qwen3_8b_base() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 8B base model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-8B-Base
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 8B base model
     """
@@ -219,6 +226,7 @@ def qwen3_8b_instruct() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 8B instruct model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-8B
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 8B instruct model
     """
@@ -246,6 +254,7 @@ def qwen3_14b_base() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 14B base model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-14B
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 14B model
     """
@@ -273,6 +282,7 @@ def qwen3_14b_instruct() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 14B instruct model initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-14B-Instruct
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 14B instruct model
     """
@@ -300,6 +310,7 @@ def qwen3_32b() -> TransformerDecoder:
     """
     Builder for creating a Qwen3 32B model (instruct, no base variant) initialized w/ the default parameter values
     from https://huggingface.co/Qwen/Qwen3-32B
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 32B instruct model (there's no base variant for the 32B)
     """
@@ -334,6 +345,7 @@ def qwen3_tokenizer(
 ) -> Qwen3Tokenizer:
     """
     Tokenizer for Qwen3.
+
     Args:
         path (str): path to the vocab.json file.
         merges_file (str): path to the merges.txt file.
@@ -349,6 +361,7 @@ def qwen3_tokenizer(
             Default is None.
         truncation_type (str): type of truncation to apply, either "left" or "right".
             Default is "right".
+
     Returns:
         Qwen3Tokenizer: Instantiation of the Qwen3 tokenizer
     """
@@ -384,9 +397,11 @@ def lora_qwen3_0_6b_base(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 0.6B base model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_0_5b`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -397,8 +412,11 @@ def lora_qwen3_0_6b_base(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 0.6B model with LoRA applied
+
     Note:
         Qwen3 0.6B-3B model builders will enable ``tie_word_embeddings`` by default (see :func:`~torchtune.models.qwen2.qwen2`)
     """
@@ -443,9 +461,11 @@ def lora_qwen3_0_6b_instruct(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 0.6B instruct model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_1_5b_instruct`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -456,10 +476,14 @@ def lora_qwen3_0_6b_instruct(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 0.6B model with LoRA applied
+
     Note:
         Qwen3 0.6B-3B model builders will enable ``tie_word_embeddings`` by default (see :func:`~torchtune.models.qwen2.qwen2`)
+
     Note:
         The base and instruct versions have the exact same arch for all Qwen3 model sizes, except for `max_seq_len`. Make sure to select the correct model builder for the weights.
     """
@@ -504,9 +528,11 @@ def lora_qwen3_1_7b_base(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 1.7B base model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_1_5b_base`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -517,10 +543,13 @@ def lora_qwen3_1_7b_base(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 1.7B model with LoRA applied
+
     Note:
         Qwen3 0.5B-3B model builders will enable ``tie_word_embeddings`` by default (see :func:`~torchtune.models.qwen2.qwen2`)
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -566,9 +595,11 @@ def lora_qwen3_1_7b_instruct(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 1.7B instruct model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_1_5b_instruct`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -579,10 +610,13 @@ def lora_qwen3_1_7b_instruct(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 1.7B model with LoRA applied
+
     Note:
         Qwen3 0.5B-3B model builders will enable ``tie_word_embeddings`` by default (see :func:`~torchtune.models.qwen2.qwen2`)
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -628,9 +662,11 @@ def lora_qwen3_4b_base(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 4B base model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_3b`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -643,8 +679,10 @@ def lora_qwen3_4b_base(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 4B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -690,9 +728,11 @@ def lora_qwen3_4b_instruct(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 4B instruct model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_3b`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -705,8 +745,10 @@ def lora_qwen3_4b_instruct(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 4B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -752,9 +794,11 @@ def lora_qwen3_8b_base(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 8B base model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_7b_base`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -767,8 +811,10 @@ def lora_qwen3_8b_base(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 8B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -813,9 +859,11 @@ def lora_qwen3_8b_instruct(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 8B instruct model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_7b_instruct`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -828,8 +876,10 @@ def lora_qwen3_8b_instruct(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 8B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -874,9 +924,11 @@ def lora_qwen3_14b_base(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 14B base model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_14b_base`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -889,8 +941,10 @@ def lora_qwen3_14b_base(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 14B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -935,9 +989,11 @@ def lora_qwen3_14b_instruct(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 14B instruct model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_14b_instruct`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -950,8 +1006,10 @@ def lora_qwen3_14b_instruct(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 14B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.
@@ -996,9 +1054,11 @@ def lora_qwen3_32b(
 ) -> TransformerDecoder:
     """
     Builder for creating a Qwen3 32B model with LoRA enabled.
+
     The Qwen3 defaults are the same as in :func:`~torchtune.models.qwen2_5.qwen2_5_32b_base`,
     while LoRA default params are based on
     https://github.com/tloen/alpaca-lora/blob/8bb8579e403dc78e37fe81ffbb253c413007323f/finetune.py#L41-L43.
+
     Args:
         lora_attn_modules (List[LORA_ATTN_MODULES]): list of which linear layers
             LoRA should be applied to in each self-attention block. Options are
@@ -1010,9 +1070,11 @@ def lora_qwen3_32b(
         lora_rank (int): rank of each low-rank approximation
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
-        quantize_base (bool): Whether to quantize base model weights
+        quantize_base (bool): Whether to quantize base model weight
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 32B model with LoRA applied
+
     Note:
         The base and instruct versions have slightly different architectures for all Qwen3 model sizes
         except 0.5B and 3B. Make sure to select the correct model builder for the weights.

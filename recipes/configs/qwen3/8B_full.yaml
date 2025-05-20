@@ -16,19 +16,19 @@
 # Single device full finetuning requires more memory optimizations. It's
 # best to use 8B_full_single_device.yaml for those cases
 
-output_dir: /tmp/torchtune/qwen3_8B/full # /tmp may be deleted by your system. Change it to your preference.
+output_dir: /pfs/training-data/paxsun/qwen3_8B/full # /tmp may be deleted by your system. Change it to your preference.
 
 # Tokenizer
 tokenizer:
   _component_: torchtune.models.qwen3.qwen3_tokenizer
-  path: /tmp/Qwen3-8B/vocab.json
-  merges_file: /tmp/Qwen3-8B/merges.txt
-  max_seq_len: null
+  path: /pfs/training-data/paxsun/Qwen3-8B/vocab.json
+  merges_file: /pfs/training-data/paxsun/Qwen3-8B/merges.txt
+  max_seq_len: 4096
 
 # Dataset
 dataset:
   _component_: torchtune.datasets.alpaca_cleaned_dataset
-  packed: False  # True increases speed
+  packed: True  # True increases speed
 seed: null
 shuffle: True
 
@@ -38,7 +38,7 @@ model:
 
 checkpointer:
   _component_: torchtune.training.FullModelHFCheckpointer
-  checkpoint_dir: /tmp/Qwen3-8B
+  checkpoint_dir: /pfs/training-data/paxsun/Qwen3-8B
   checkpoint_files: [
     model-00001-of-00005.safetensors,
     model-00002-of-00005.safetensors,
@@ -52,8 +52,8 @@ checkpointer:
 resume_from_checkpoint: False
 
 # Fine-tuning arguments
-batch_size: 2
-epochs: 1
+batch_size: 4
+epochs: 2
 optimizer:
   _component_: torch.optim.AdamW
   fused: True
@@ -61,7 +61,7 @@ optimizer:
 loss:
   _component_: torchtune.modules.loss.LinearCrossEntropyLoss
 max_steps_per_epoch: null
-gradient_accumulation_steps: 8  # Use to increase effective batch size
+gradient_accumulation_steps: 1  # Use to increase effective batch size
 clip_grad_norm: null
 compile: False  # torch.compile the model + loss, True increases speed + decreases memory
 optimizer_in_bwd: False  # True saves memory. Requires gradient_accumulation_steps=1

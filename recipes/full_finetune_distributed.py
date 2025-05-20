@@ -29,8 +29,8 @@ from torchtune.data import padded_collate_packed
 from torchtune.datasets import ConcatDataset
 from torchtune.modules.embedding_utils import resize_token_embeddings
 from torchtune.modules.loss import SFTLoss
-from torchtune.modules.ulysess import gather_outpus_and_unpad, set_ulysses_sequence_parallel_group, \
-                                      get_ulysses_sequence_parallel_world_size, ulysses_pad_and_slice_inputs
+from torchtune.modules.ulysess import gather_outpus_and_unpad, get_ulysses_sequence_parallel_world_size, \
+                                    ulysses_pad_and_slice_inputs
 from torchtune.recipe_interfaces import FTRecipeInterface
 from torchtune.training import (
     DummyProfiler,
@@ -167,7 +167,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         # Set up n-d device mesh
         self.parallel_dims = training.ParallelDims(
             dp_replicate=data_replicate,
-            dp_shard=self.data_shard,
+            dp_shard=data_shard,
             tp=self.tp_degree,
             ulysses_sp=ulysses_sp_size,
             world_size=self.world_size,
@@ -181,8 +181,6 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             )
         else:
             self.dp_degree, self.dp_rank = 1, 0
-
-        set_ulysses_sequence_parallel_group(self.world_mesh["ulysses_sp_process_group"])
 
         # Logging attributes
         self._output_dir = cfg.output_dir

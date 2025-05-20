@@ -38,6 +38,7 @@ from torchtune.modules.model_fusion import DeepFusionModel, EarlyFusionModel
 from torchtune.modules.peft import get_adapter_state_dict
 from torchtune.utils import get_device, get_logger
 from torchtune.utils._logging import deprecated
+from torchtune.modules.ulysess import set_ulysses_sequence_parallel_group
 
 _log: logging.Logger = get_logger()
 
@@ -90,40 +91,6 @@ class ParallelDims:
             f"tp({tp}) != WORLD_SIZE({self.world_size})"
         )
 
-    def _build_ulysses_sp(mesh, ulysses_sp: int):
-        """
-        Build a new sequence parallel (ulysses_sp) process group.
-        Every A DP ranks will be grouped into one sequence parallel group.
-        """
-        rank = get_rank()
-        
-        # Get the existing data parallel (DP) group
-        dp_group = mesh['dp']
-        dp_ranks = dp_group.ranks if hasattr(dp_group, 'ranks') else list(dp_group)
-
-        # Split all DP ranks into sequence parallel groups
-        sp_groups = []
-        for i in range(0, len(dp_ranks), ulysses_sp):
-            sp_group = dp_ranks[i:i+ulysses_sp]
-            sp_groups.append(sp_group)
-
-        # Find the group that contains the current rank
-        for group in sp_groups:
-            if rank in group:
-                sp_group_for_current_rank = group
-                break
-        else:
-            raise RuntimeError(f"Rank {rank} is not in any ulysses_sp group.")
-
-        # Create a new torch.distributed process group for the current rank's SP group
-        sp_process_group = new_group(ranks=sp_group_for_current_rank)
-
-        # Register the new group into the mesh
-        mesh['ulysses_sp_process_group'] = sp_process_group
-        mesh['ulysses_sp_ranks'] = sp_group_for_current_rank  # Optional: useful for debugging or logging
-
-        return mesh
-
     def build_mesh(self, device_type):
         dims = []
         names = []
@@ -151,7 +118,7 @@ class ParallelDims:
         if dp_mesh_dim_names != []:
             mesh[tuple(dp_mesh_dim_names)]._flatten(mesh_dim_name="dp")
 
-        self._build_ulysses_sp(mesh, self.ulysses_sp)
+        _build_ulysses_sp(mesh, self.ulysses_sp)
 
         return mesh
 
@@ -176,6 +143,35 @@ class ParallelDims:
         # update below as more parallelism options are implemented
         return self.tp
 
+def _build_ulysses_sp(mesh, ulysses_sp):
+    """
+    Build a new sequence parallel (ulysses_sp) process group.
+    Every A DP ranks will be grouped into one sequence parallel group.
+    """
+    rank = get_rank()
+    
+    # Get the existing data parallel (DP) group
+    dp_ranks = mesh['dp'].mesh.flatten().tolist()
+
+    # Split all DP ranks into sequence parallel groups
+    sp_groups = []
+    for i in range(0, len(dp_ranks), ulysses_sp):
+        sp_group = dp_ranks[i:i+ulysses_sp]
+        sp_groups.append(sp_group)
+
+    # Find the group that contains the current rank
+    for group in sp_groups:
+        if rank in group:
+            sp_group_for_current_rank = group
+            break
+    else:
+        raise RuntimeError(f"Rank {rank} is not in any ulysses_sp group.")
+
+    # Create a new torch.distributed process group for the current rank's SP group
+    sp_process_group = new_group(ranks=sp_group_for_current_rank)
+
+    # Register the new group into the mesh
+    set_ulysses_sequence_parallel_group(sp_process_group)
 
 def _get_sharding_strategy(strategy: str) -> ShardingStrategy:
     """Helper function to convert sharding strategy strings to ShardingStrategy enum."""
@@ -771,3 +767,4 @@ def prepare_mha_for_tp(
     if is_fusion_model:
         model.decoder = decoder
     return model
+

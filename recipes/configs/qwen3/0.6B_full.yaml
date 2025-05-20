@@ -42,6 +42,8 @@ dataset:
   packed: True  # True increases speed
 seed: null
 shuffle: True
+
+# Parallelism
 ulysses_sequence_parallel_size: 2
 
 # Fine-tuning arguments

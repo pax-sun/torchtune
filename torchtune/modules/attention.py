@@ -227,6 +227,7 @@ class MultiHeadAttention(nn.Module):
             - d: embed dim
             - h_d: head dim
         """
+        assert y is not None
 
         # x has shape [b, s_x, d]
         # y has shape [b, s_y, d]
@@ -269,7 +270,7 @@ class MultiHeadAttention(nn.Module):
                 v = gather_seq_scatter_heads(v, seq_dim=1, head_dim=2)
             
             full_q_len = q.size(1)  # full seq length
-            # shard_q_num_heads = q.size(2)
+            shard_q_num_heads = q.size(2)
             shard_kv_num_heads = k.size(2)
 
             # Apply positional embeddings

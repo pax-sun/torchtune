@@ -18,6 +18,7 @@ import torch
 from omegaconf import DictConfig, ListConfig
 
 from torch import nn
+from torch.distributed.device_mesh import init_device_mesh
 from torch.distributed import destroy_process_group, init_process_group
 from torch.distributed.tensor import DTensor
 from torch.distributed.tensor.parallel import parallelize_module
@@ -32,7 +33,7 @@ from torchtune.datasets import ConcatDataset
 from torchtune.modules.embedding_utils import resize_token_embeddings
 from torchtune.modules.loss import SFTLoss
 from torchtune.modules.ulysess import gather_outpus_and_unpad, get_ulysses_sequence_parallel_world_size, \
-                                    ulysses_pad_and_slice_inputs
+                                    set_ulysses_sequence_parallel_group, ulysses_pad_and_slice_inputs
 from torchtune.recipe_interfaces import FTRecipeInterface
 from torchtune.training import (
     DummyProfiler,
@@ -164,14 +165,17 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             )
         data_shard = cfg.get("data_parallel_shard_dim", -1)  # -1 means to infer
         data_replicate = cfg.get("data_parallel_replicate_dim", 1)
-        ulysses_sp_size = cfg.get("ulysses_sequence_parallel_size", 1)
+        self.ulysses_sp_size = cfg.get("ulysses_sequence_parallel_size", 1)
+
+        # Ulysses SP is not compatible with TP now
+        if (self.tp_degree > 1):
+            assert (self.ulysses_sp_size == 1), "Ulysses SP is not compatible with TP"
 
         # Set up n-d device mesh
         self.parallel_dims = training.ParallelDims(
             dp_replicate=data_replicate,
             dp_shard=data_shard,
             tp=self.tp_degree,
-            ulysses_sp=ulysses_sp_size,
             world_size=self.world_size,
         )
         self.world_mesh = self.parallel_dims.build_mesh(device_type=device_type)
@@ -183,6 +187,16 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             )
         else:
             self.dp_degree, self.dp_rank = 1, 0
+
+
+        self.real_dp_size = self.dp_degree // self.ulysses_sp_size
+        self.real_dp_rank = self.dp_rank // self.ulysses_sp_size
+        assert (self.real_dp_size * self.ulysses_sp_size == self.dp_degree), "dp_degree should be devided by sp_degree"
+        self.ulysses_device_mesh = init_device_mesh(device_type="cuda",
+                                           mesh_shape=(self.real_dp_size, self.ulysses_sp_size),
+                                           mesh_dim_names=("ulysses_dp", "ulysses_sp"))
+
+        set_ulysses_sequence_parallel_group(self.ulysses_device_mesh["ulysses_sp"].get_group())
 
         # Logging attributes
         self._output_dir = cfg.output_dir
@@ -787,11 +801,8 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             raise RuntimeError("left_pad_sequence collator is only for inference.")
         collate_fn = _get_component_from_path(collate_fn)
 
-        real_dp_rank = int(self.dp_rank / get_ulysses_sequence_parallel_world_size())
-        real_dp_degree= int(self.dp_degree / get_ulysses_sequence_parallel_world_size())
-
         sampler = StatefulDistributedSampler(
-            ds, num_replicas=real_dp_degree, rank=real_dp_rank, shuffle=shuffle, seed=0
+            ds, num_replicas=self.real_dp_size, rank=self.real_dp_rank, shuffle=shuffle, seed=0
         )
         dataloader = StatefulDataLoader(
             dataset=ds,
@@ -817,18 +828,17 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         # Shape [b, s], needed for the loss not the model
         labels = batch.pop("labels")
 
-        ulysses_size = get_ulysses_sequence_parallel_world_size()
         # pad and slice the inputs if sp > 1
-        if ulysses_size > 1:
+        if self.ulysses_sp_size > 1:
             batch["tokens"], batch["input_pos"], pad_size = ulysses_pad_and_slice_inputs(batch["tokens"],
                                                                                         batch["input_pos"],
-                                                                                        sp_size=ulysses_size)
+                                                                                        sp_size=self.ulysses_sp_size)
 
         with self.activations_handling_ctx:
             outputs = self._model(**batch)
 
         # gather output if sp > 1
-        if ulysses_size > 1:
+        if self.ulysses_sp_size > 1:
             outputs = gather_outpus_and_unpad(outputs,
                                             gather_dim=1,
                                             unpad_dim=1,
@@ -934,6 +944,8 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                 current_num_tokens = (
                     batch["labels"] != self._loss_fn.ignore_index
                 ).sum()
+
+                current_num_tokens = current_num_tokens / self.ulysses_sp_size
                 num_tokens += current_num_tokens
 
                 # Loss is normalized by default so we multiply by the number of tokens

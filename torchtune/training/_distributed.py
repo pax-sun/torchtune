@@ -87,9 +87,7 @@ class ParallelDims:
             f"Invalid parallel dims: dp_replicate({dp_replicate}) * dp_shard({dp_shard}) * "
             f"tp({tp}) != WORLD_SIZE({self.world_size})"
         )
-        
-        dp_size = dp_replicate * dp_shard
-        assert dp_size % ulysses_sp == 0, "dp_size must be devided by ulysses_sp"
+        assert dp_replicate * dp_shard % ulysses_sp == 0, "dp_degree must be devided by ulysses_sp"
 
 
     def build_mesh(self, device_type):
@@ -119,7 +117,12 @@ class ParallelDims:
         if dp_mesh_dim_names != []:
             mesh[tuple(dp_mesh_dim_names)]._flatten(mesh_dim_name="dp")
 
-        _build_ulysses_sp(mesh, self.ulysses_sp)
+        # set up ulysses_device_mesh and process group with init_device_mesh
+        real_dp_size = self.dp_replicate * self.dp_shard // self.ulysses_sp
+        ulysses_device_mesh = init_device_mesh(device_type="cuda",
+                                           mesh_shape=(real_dp_size, self.ulysses_sp),
+                                           mesh_dim_names=("ulysses_dp", "ulysses_sp"))
+        set_ulysses_sequence_parallel_group(ulysses_device_mesh["ulysses_sp"].get_group())
 
         return mesh
 
@@ -143,36 +146,6 @@ class ParallelDims:
     def non_data_parallel_size(self):
         # update below as more parallelism options are implemented
         return self.tp
-
-def _build_ulysses_sp(mesh, ulysses_sp):
-    """
-    Build a new sequence parallel (ulysses_sp) process group.
-    Every A DP ranks will be grouped into one sequence parallel group.
-    """
-    rank = get_rank()
-    
-    # Get the existing data parallel (DP) group
-    dp_ranks = mesh['dp'].mesh.flatten().tolist()
-
-    # Split all DP ranks into sequence parallel groups
-    sp_groups = []
-    for i in range(0, len(dp_ranks), ulysses_sp):
-        sp_group = dp_ranks[i:i+ulysses_sp]
-        sp_groups.append(sp_group)
-
-    # Find the group that contains the current rank
-    for group in sp_groups:
-        if rank in group:
-            sp_group_for_current_rank = group
-            break
-    else:
-        raise RuntimeError(f"Rank {rank} is not in any ulysses_sp group.")
-
-    # Create a new torch.distributed process group for the current rank's SP group
-    sp_process_group = new_group(ranks=sp_group_for_current_rank)
-
-    # Register the new group into the mesh
-    set_ulysses_sequence_parallel_group(sp_process_group)
 
 def _get_sharding_strategy(strategy: str) -> ShardingStrategy:
     """Helper function to convert sharding strategy strings to ShardingStrategy enum."""

@@ -176,6 +176,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             dp_replicate=data_replicate,
             dp_shard=data_shard,
             tp=self.tp_degree,
+            ulysses_sp=self.ulysses_sp_size,
             world_size=self.world_size,
         )
         self.world_mesh = self.parallel_dims.build_mesh(device_type=device_type)
@@ -188,15 +189,8 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         else:
             self.dp_degree, self.dp_rank = 1, 0
 
-
         self.real_dp_size = self.dp_degree // self.ulysses_sp_size
         self.real_dp_rank = self.dp_rank // self.ulysses_sp_size
-        assert (self.real_dp_size * self.ulysses_sp_size == self.dp_degree), "dp_degree should be devided by sp_degree"
-        self.ulysses_device_mesh = init_device_mesh(device_type="cuda",
-                                           mesh_shape=(self.real_dp_size, self.ulysses_sp_size),
-                                           mesh_dim_names=("ulysses_dp", "ulysses_sp"))
-
-        set_ulysses_sequence_parallel_group(self.ulysses_device_mesh["ulysses_sp"].get_group())
 
         # Logging attributes
         self._output_dir = cfg.output_dir

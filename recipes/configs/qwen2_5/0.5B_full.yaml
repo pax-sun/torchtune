@@ -29,7 +29,7 @@ tokenizer:
 # Checkpointer
 checkpointer:
   _component_: torchtune.training.FullModelHFCheckpointer
-  checkpoint_dir: /tmp/Qwen2.5-0.5B-Instruct
+  checkpoint_dir: /tmp/Qwen2.5-0.5B-Instruct  
   checkpoint_files: [model.safetensors]
   recipe_checkpoint: null
   output_dir: ${output_dir}
@@ -47,7 +47,7 @@ shuffle: True
 epochs: 1
 max_steps_per_epoch: null
 batch_size: 2
-gradient_accumulation_steps: 8  # Use to increase effective batch size
+gradient_accumulation_steps: 4  # Use to increase effective batch size
 optimizer:
   _component_: torch.optim.AdamW
   fused: True

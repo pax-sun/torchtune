@@ -13,6 +13,7 @@
 #
 # This config is for fine-tuning on 2+ GPUs.
 
+
 output_dir: /tmp/torchtune/qwen3_0_6B/full # /tmp may be deleted by your system. Change it to your preference.
 
 # Model arguments
@@ -39,14 +40,17 @@ resume_from_checkpoint: False
 # Dataset
 dataset:
   _component_: torchtune.datasets.alpaca_cleaned_dataset
-  packed: False  # True increases speed
+  packed: True  # True increases speed
 seed: null
 shuffle: True
+
+# Parallelism
+ulysses_sequence_parallel_size: 1
 
 # Fine-tuning arguments
 epochs: 1
 max_steps_per_epoch: null
-batch_size: 2
+batch_size: 1
 gradient_accumulation_steps: 8  # Use to increase effective batch size
 optimizer:
   _component_: torch.optim.AdamW

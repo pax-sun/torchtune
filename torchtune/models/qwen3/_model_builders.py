@@ -413,6 +413,7 @@ def lora_qwen3_0_6b_base(
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
 
+
     Returns:
         TransformerDecoder: Instantiation of Qwen3 0.6B model with LoRA applied
 
@@ -475,6 +476,7 @@ def lora_qwen3_0_6b_instruct(
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
         quantize_base (bool): Whether to quantize base model weights
+
 
     Returns:
         TransformerDecoder: Instantiation of Qwen3 0.6B model with LoRA applied
@@ -1068,7 +1070,7 @@ def lora_qwen3_32b(
         lora_rank (int): rank of each low-rank approximation
         lora_alpha (float): scaling factor for the low-rank approximation
         lora_dropout (float): dropout probability for the low-rank approximation. Default: 0.0
-        quantize_base (bool): Whether to quantize base model weights
+        quantize_base (bool): Whether to quantize base model weight
 
     Returns:
         TransformerDecoder: Instantiation of Qwen3 32B model with LoRA applied

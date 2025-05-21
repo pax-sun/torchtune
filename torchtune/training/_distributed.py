@@ -26,6 +26,7 @@ from torch.distributed.checkpoint.state_dict import (
     set_optimizer_state_dict,
     StateDictOptions,
 )
+from torch.distributed import new_group, get_world_size, get_rank
 from torch.distributed.device_mesh import DeviceMesh, init_device_mesh
 from torch.distributed.fsdp import ShardingStrategy
 from torch.nn.modules.module import _IncompatibleKeys
@@ -37,6 +38,7 @@ from torchtune.modules.model_fusion import DeepFusionModel, EarlyFusionModel
 from torchtune.modules.peft import get_adapter_state_dict
 from torchtune.utils import get_device, get_logger
 from torchtune.utils._logging import deprecated
+from torchtune.modules.ulysess import set_ulysses_sequence_parallel_group
 
 _log: logging.Logger = get_logger()
 
@@ -54,20 +56,25 @@ VALID_BACKENDS_FOR_MEMORY_STATS = ("cuda", "xpu", "npu")
 
 @dataclass
 class ParallelDims:
-    dp_replicate: int
-    dp_shard: int
-    tp: int
-    world_size: int
+    dp_replicate: int = 1
+    dp_shard: int = 1
+    tp: int = 1
+    ulysses_sp: int = 1
+    world_size: int = 1
 
     def __post_init__(self):
         self._validate()
 
     def _validate(self):
-        dp_replicate, dp_shard, tp = (
+        dp_replicate, dp_shard, tp, ulysses_sp = (
             self.dp_replicate,
             self.dp_shard,
             self.tp,
+            self.ulysses_sp,
         )
+        if tp > 1:
+            assert ulysses_sp == 1, "ulysses_sp is not compatible with TP now"
+        
         for d in (dp_replicate, tp):
             assert d >= 1, "Parallelism degree should be >= 1, except for dp_shard"
 
@@ -80,6 +87,8 @@ class ParallelDims:
             f"Invalid parallel dims: dp_replicate({dp_replicate}) * dp_shard({dp_shard}) * "
             f"tp({tp}) != WORLD_SIZE({self.world_size})"
         )
+        assert dp_replicate * dp_shard % ulysses_sp == 0, "dp_degree must be devided by ulysses_sp"
+
 
     def build_mesh(self, device_type):
         dims = []
@@ -108,6 +117,13 @@ class ParallelDims:
         if dp_mesh_dim_names != []:
             mesh[tuple(dp_mesh_dim_names)]._flatten(mesh_dim_name="dp")
 
+        # set up ulysses_device_mesh and process group with init_device_mesh
+        real_dp_size = self.dp_replicate * self.dp_shard // self.ulysses_sp
+        ulysses_device_mesh = init_device_mesh(device_type="cuda",
+                                           mesh_shape=(real_dp_size, self.ulysses_sp),
+                                           mesh_dim_names=("ulysses_dp", "ulysses_sp"))
+        set_ulysses_sequence_parallel_group(ulysses_device_mesh["ulysses_sp"].get_group())
+
         return mesh
 
     @property
@@ -130,7 +146,6 @@ class ParallelDims:
     def non_data_parallel_size(self):
         # update below as more parallelism options are implemented
         return self.tp
-
 
 def _get_sharding_strategy(strategy: str) -> ShardingStrategy:
     """Helper function to convert sharding strategy strings to ShardingStrategy enum."""
@@ -726,3 +741,4 @@ def prepare_mha_for_tp(
     if is_fusion_model:
         model.decoder = decoder
     return model
+

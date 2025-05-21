@@ -11,6 +11,7 @@ import torch
 from torch import nn
 from torchtune.modules.attention_utils import _MaskType, _sdpa_or_flex_attention
 from torchtune.modules.kv_cache import KVCache
+from torchtune.modules.ulysess import gather_heads_scatter_seq, gather_seq_scatter_heads, get_ulysses_sequence_parallel_world_size
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +227,8 @@ class MultiHeadAttention(nn.Module):
             - d: embed dim
             - h_d: head dim
         """
+        assert y is not None
+
         # x has shape [b, s_x, d]
         # y has shape [b, s_y, d]
         b, s_x, _ = x.shape
@@ -238,16 +241,15 @@ class MultiHeadAttention(nn.Module):
         q_per_kv = self.num_heads // self.num_kv_heads
         q = q.view(b, s_x, self.num_kv_heads * q_per_kv, self.head_dim)
 
-        # Apply positional embeddings
-        if self.pos_embeddings is not None:
-            q = self.pos_embeddings(q, input_pos=input_pos)
+        if y is not None:
+            # k,v shape [b, s_y, num_kv_heads * head_dim]
+            k = self.k_proj(y)
+            v = self.v_proj(y)
 
-        # [b, n_h, s_x, h_d]
-        q = q.transpose(1, 2)
-
-        # Normalize q
-        if self.q_norm is not None:
-            q = self.q_norm(q)
+            # Update k and v shape
+            # k,v shape: [b, s_y, n_kv, h_d]
+            k = k.view(b, s_y, -1, self.head_dim)
+            v = v.view(b, s_y, -1, self.head_dim)
 
         if y is None:
             if self.kv_cache is None or not self.cache_enabled:
@@ -257,16 +259,32 @@ class MultiHeadAttention(nn.Module):
             k = self.kv_cache.k_cache
             v = self.kv_cache.v_cache
         else:
-            # Update k and v shape, positional embeddings, and normalization
+            # AlltoAll for Ulysses
+            ulysses_sp_size = get_ulysses_sequence_parallel_world_size()
 
-            # k,v shape [b, s_y, num_kv_heads * head_dim]
-            k = self.k_proj(y)
-            v = self.v_proj(y)
+            if ulysses_sp_size > 1:
+                # (bsz, seq_len/n, n_head, head_dim) -> (bsz, seq_len, n_head/n, head_dim)
+                # [b, s, n_h, h_d]
+                q = gather_seq_scatter_heads(q, seq_dim=1, head_dim=2)
+                k = gather_seq_scatter_heads(k, seq_dim=1, head_dim=2)
+                v = gather_seq_scatter_heads(v, seq_dim=1, head_dim=2)
+            
+            full_q_len = q.size(1)  # full seq length
+            shard_q_num_heads = q.size(2)
+            shard_kv_num_heads = k.size(2)
 
             # Apply positional embeddings
-            # k,v shape: [b, s_y, n_kv, h_d]
-            k = k.view(b, s_y, -1, self.head_dim)
-            v = v.view(b, s_y, -1, self.head_dim)
+            if self.pos_embeddings is not None:
+                q = self.pos_embeddings(q, input_pos=input_pos)
+
+            # [b, n_h, s_x, h_d]
+            q = q.transpose(1, 2)
+
+            # Normalize q
+            if self.q_norm is not None:
+                q = self.q_norm(q)
+
+            # Apply k,v positional embeddings, and normalization
             if self.pos_embeddings is not None:
                 k = self.pos_embeddings(k, input_pos=input_pos)
 
@@ -286,7 +304,7 @@ class MultiHeadAttention(nn.Module):
         # as the query tensor by copying values across the relevant dim
         # k,v shape: [b, n_kv, s, h_d] -> [b, n_h, s, h_d]
         if self.num_heads != self.num_kv_heads:
-            expand_shape = (b, self.num_kv_heads, q_per_kv, -1, self.head_dim)
+            expand_shape = (b, shard_kv_num_heads, q_per_kv, -1, self.head_dim)
             k = k.unsqueeze(2).expand(expand_shape).flatten(1, 2)
             v = v.unsqueeze(2).expand(expand_shape).flatten(1, 2)
 
@@ -300,5 +318,10 @@ class MultiHeadAttention(nn.Module):
         )
 
         # reshape the output to be the same shape as the input
-        output = output.transpose(1, 2).contiguous().view(b, s_x, -1)
+        output = output.transpose(1, 2).contiguous().view(b, full_q_len, -1)
+
+        ########## AlltoAll for Ulysses ##########
+        if ulysses_sp_size > 1:
+            output = gather_heads_scatter_seq(output, seq_dim=1, head_dim=2)
+
         return self.output_proj(output)

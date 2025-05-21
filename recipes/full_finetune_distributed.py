@@ -31,6 +31,8 @@ from torchtune.data import padded_collate_packed
 from torchtune.datasets import ConcatDataset
 from torchtune.modules.embedding_utils import resize_token_embeddings
 from torchtune.modules.loss import SFTLoss
+from torchtune.modules.ulysess import gather_outpus_and_unpad, get_ulysses_sequence_parallel_world_size, \
+                                    ulysses_pad_and_slice_inputs
 from torchtune.recipe_interfaces import FTRecipeInterface
 from torchtune.training import (
     DummyProfiler,
@@ -162,12 +164,18 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             )
         data_shard = cfg.get("data_parallel_shard_dim", -1)  # -1 means to infer
         data_replicate = cfg.get("data_parallel_replicate_dim", 1)
+        self.ulysses_sp_degree = cfg.get("ulysses_sequence_parallel_size", 1)
+
+        # Ulysses SP is not compatible with TP now
+        if (self.tp_degree > 1):
+            assert (self.ulysses_sp_degree == 1), "Ulysses SP is not compatible with TP"
 
         # Set up n-d device mesh
         self.parallel_dims = training.ParallelDims(
             dp_replicate=data_replicate,
             dp_shard=data_shard,
             tp=self.tp_degree,
+            ulysses_sp=self.ulysses_sp_degree,
             world_size=self.world_size,
         )
         self.world_mesh = self.parallel_dims.build_mesh(device_type=device_type)
@@ -179,6 +187,9 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
             )
         else:
             self.dp_degree, self.dp_rank = 1, 0
+
+        self.real_dp_size = self.dp_degree // self.ulysses_sp_degree
+        self.real_dp_rank = self.dp_rank // self.ulysses_sp_degree
 
         # Logging attributes
         self._output_dir = cfg.output_dir
@@ -784,7 +795,7 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         collate_fn = _get_component_from_path(collate_fn)
 
         sampler = StatefulDistributedSampler(
-            ds, num_replicas=self.dp_degree, rank=self.dp_rank, shuffle=shuffle, seed=0
+            ds, num_replicas=self.real_dp_size, rank=self.real_dp_rank, shuffle=shuffle, seed=0
         )
         dataloader = StatefulDataLoader(
             dataset=ds,
@@ -810,8 +821,21 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
         # Shape [b, s], needed for the loss not the model
         labels = batch.pop("labels")
 
+        # pad and slice the inputs if sp > 1
+        if self.ulysses_sp_degree > 1:
+            batch["tokens"], batch["input_pos"], pad_size = ulysses_pad_and_slice_inputs(batch["tokens"],
+                                                                                        batch["input_pos"],
+                                                                                        sp_size=self.ulysses_sp_degree)
+
         with self.activations_handling_ctx:
             outputs = self._model(**batch)
+
+        # gather output if sp > 1
+        if self.ulysses_sp_degree > 1:
+            outputs = gather_outpus_and_unpad(outputs,
+                                            gather_dim=1,
+                                            unpad_dim=1,
+                                            padding_size=pad_size)
 
         # post process for third party loss functions
         if not isinstance(self._loss_fn, SFTLoss):
@@ -913,6 +937,8 @@ class FullFinetuneRecipeDistributed(FTRecipeInterface):
                 current_num_tokens = (
                     batch["labels"] != self._loss_fn.ignore_index
                 ).sum()
+
+                current_num_tokens = current_num_tokens / self.ulysses_sp_degree
                 num_tokens += current_num_tokens
 
                 # Loss is normalized by default so we multiply by the number of tokens

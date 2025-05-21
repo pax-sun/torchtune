@@ -19,7 +19,11 @@
 output_dir: /pfs/training-data/paxsun/qwen3_8B/full # /tmp may be deleted by your system. Change it to your preference.
 
 # Parallelism
-ulysses_sequence_parallel_size: 2
+ulysses_sequence_parallel_size: 1
+
+# Memory management
+enable_activation_checkpointing: False  # True reduces memory
+enable_activation_offloading: False  # True reduces memory
 
 # Tokenizer
 tokenizer:
@@ -71,10 +75,6 @@ optimizer_in_bwd: False  # True saves memory. Requires gradient_accumulation_ste
 
 # Training env
 device: cuda
-
-# Memory management
-enable_activation_checkpointing: True  # True reduces memory
-enable_activation_offloading: False  # True reduces memory
 
 # Reduced precision
 dtype: bf16

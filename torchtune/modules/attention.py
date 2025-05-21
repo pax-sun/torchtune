@@ -259,7 +259,7 @@ class MultiHeadAttention(nn.Module):
             k = self.kv_cache.k_cache
             v = self.kv_cache.v_cache
         else:
-            ########## AlltoAll for Ulysses ##########
+            # AlltoAll for Ulysses
             ulysses_sp_size = get_ulysses_sequence_parallel_world_size()
 
             if ulysses_sp_size > 1:

@@ -13,6 +13,8 @@ dependencies = [
     # Stable torchdata (no nightly support)
     "torchdata",
 
+    "liger-kernel",
+
     # Hugging Face integrations
     "datasets",
     "huggingface_hub[hf_transfer]",

@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributed.tensor import DTensor
 
+from liger_kernel.transformers import LigerFusedLinearCrossEntropyLoss
+
 from torchtune.modules.loss.loss_types import SFTLoss
 from torchtune.utils import get_logger
 
@@ -143,3 +145,75 @@ class LinearCrossEntropyLoss(nn.Module, SFTLoss):
             return total_loss
         else:
             return total_loss / total_elements
+
+
+class LigerLinearCrossEntropyLoss(nn.Module, SFTLoss):
+    """
+    Memory-efficient cross-entropy loss using Liger's fused implementation.
+
+    This loss function integrates the final linear projection with the cross-entropy calculation,
+    reducing memory overhead and increasing performance by avoiding intermediate activations.
+
+    This requires the model to skip the final output projection, which will be handled by this class.
+    
+    Usage:
+        >>> model = Transformer(...)
+        >>> loss = LigerLinearCrossEntropyLoss(...)
+        >>> loss.set_model_output(model)
+        >>> loss.apply_compile_strategy()
+    """
+
+    def __init__(
+        self,
+        ignore_index: int = -100,
+    ):
+        """
+        Args:
+            ignore_index (int): Token index to ignore when computing loss (typically padding tokens).
+        """
+        super().__init__()
+        self.linear_projection = None
+        self.ignore_index = ignore_index
+        self.loss_fn = LigerFusedLinearCrossEntropyLoss(ignore_index=self.ignore_index, reduction="mean")
+
+    def set_model_output(self, model: nn.Module) -> None:
+        """
+        Registers the model's output projection layer to be used inside the loss function.
+
+        Args:
+            model (nn.Module): The model whose output layer will be used for projection.
+        """
+        model.skip_output_layer = True
+        self.linear_projection = model.output
+
+    def apply_compile_strategy(self, *args, **kwargs):
+        """
+        Stub for applying compilation. Currently not supported for this fused loss.
+        """
+        log.warning("Skipping compile loss, as it is not supported at this time")
+        return self
+
+    def forward(
+        self,
+        outputs: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Computes the Liger fused linear + cross-entropy loss.
+
+        Args:
+            outputs (torch.Tensor): Model hidden states before projection. Shape: [batch_size, seq_len, embed_dim]
+            targets (torch.Tensor): Ground truth token indices. Shape: [batch_size, seq_len]
+
+        Returns:
+            torch.Tensor: Scalar loss tensor.
+        """
+
+        # Flatten outputs and targets to [batch_size * seq_len, ...]
+        targets = targets.reshape(-1)
+        outputs = outputs.reshape(-1, outputs.size(-1))
+
+        # Compute fused projection + cross-entropy loss
+        loss = self.loss_fn(self.linear_projection.weight, outputs, targets)
+
+        return loss
